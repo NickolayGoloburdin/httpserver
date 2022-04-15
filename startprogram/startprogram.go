@@ -1,11 +1,11 @@
 package startprogram
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -16,34 +16,33 @@ func StartProgram(path string, state chan int, status *string) {
 	}
 	state <- 1
 	cmd := exec.Command(path)
-	cmdOutput := &bytes.Buffer{}
-	cmd.Stdout = cmdOutput
-	err := cmd.Start()
+	//cmdOutput := &bytes.Buffer{}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Start()
+	*status = "loading"
+	//var once bool
+	//var res bool
+	time.Sleep(time.Millisecond * 300)
+	*status = "Enable"
+	// for len(state) != 0 {
+	// 	output := cmdOutput.Bytes()
 
-	var once bool
-	for len(state) != 0 {
-		// output := cmdOutput.Bytes()
+	// 	if parseOutput(output, &res) {
+	// 		*status = "enabled"
 
-		// if parseOutput(output, &res) && !once {
-		// 	once = true
-		// }
-		if !once {
-			once = true
-			*status = "loading"
-		} else {
-			*status = "enabled"
-		}
-		printError(err)
-		printOutput(string(cmdOutput.Bytes()))
-		time.Sleep(time.Millisecond * 2000)
+	// 		break
+	// 	}
+	// 	fmt.Println("Finding")
 
-	}
+	// 	printError(err)
+	// 	//printOutput(output)
+	// 	time.Sleep(time.Millisecond * 300)
+
+	// }
+	cmd.Wait()
 }
 func EndProgram(path string, state chan int, status *string) {
-
-	if len(state) == 0 {
-		return
-	}
 
 	*status = "loading"
 	cmd := exec.Command(path)
@@ -59,15 +58,18 @@ func printError(err error) {
 		os.Stderr.WriteString(fmt.Sprintf("==> Error: %s\n", err.Error()))
 	}
 }
-func printOutput(output string) {
-	if output != "" {
-		os.Stdout.WriteString(fmt.Sprintf(output))
+func printCommand(cmd *exec.Cmd) {
+	fmt.Printf("==> Executing: %s\n", strings.Join(cmd.Args, " "))
+}
+
+func printOutput(outs []byte) {
+	if len(outs) > 0 {
+		fmt.Printf("==> Output: %s\n", string(outs))
 	}
 }
 
 func parseOutput(outs []byte, res *bool) bool {
-	matched, _ := regexp.MatchString(`True`, string(outs))
-	*res = matched
+	matched, _ := regexp.MatchString(`position finder ready`, string(outs))
 	return matched
 
 }
